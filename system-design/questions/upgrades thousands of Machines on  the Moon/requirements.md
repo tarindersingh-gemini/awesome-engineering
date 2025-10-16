@@ -23,11 +23,11 @@
   - ✅ Staged rollout with pause/resume capability
 
 ### 1.2 Server Organization
-- **Total Servers**: 5,000 servers
+- **Total Servers**: 10,000 servers
 - **Tier Classification**:
-  - **Tier 1 (Critical - 500 servers)**: Life support, communications, emergency systems
-  - **Tier 2 (Operations - 2,000 servers)**: Base operations, navigation, power management
-  - **Tier 3 (Research - 2,500 servers)**: Scientific research, data processing, non-critical workloads
+  - **Tier 1 (Critical - 5000 servers)**: Life support, communications, emergency systems
+  - **Tier 2 (Operations - 2500 servers)**: Base operations, navigation, power management
+  - **Tier 3 (Research - 2500 servers)**: Scientific research, data processing, non-critical workloads
 
 - **Geographic Distribution**:
   - Multiple lunar base locations (3-5 sites)
@@ -50,13 +50,9 @@
 ## 2. Non-Functional Requirements
 
 ### 2.1 Scale & Timing
-- **Total Upgrade Window**: 7 days (168 hours) for all 5,000 servers
-- **Upgrade Schedule**:
-  - Days 1-2: Tier 3 servers (2,500 servers) - ~52 servers/hour
-  - Days 3-5: Tier 2 servers (2,000 servers) - ~28 servers/hour
-  - Days 6-7: Tier 1 servers (500 servers) - ~10 servers/hour
-  
-- **Single Server Upgrade Duration**: 
+- **Total Upgrade Window**: 7 days (168 hours) for all 10,000 servers
+
+- **Single Server Upgrade Duration**:
   - Target: 15-30 minutes per server
   - Includes: download, backup, upgrade, validation, rollback (if needed)
 
