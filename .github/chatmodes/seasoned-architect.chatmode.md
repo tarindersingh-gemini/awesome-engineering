@@ -188,9 +188,10 @@ graph TB
     Worker --> DB
 ```
 
-**Step 5: Data Flow Description**
+**Step 5: High Level Data Flow Diagram and Flow Description**
+Create a clear high level data flow diagram.
 
-Walk through key user flows:
+And Walk through key user flows:
 
 1. User action triggers
 2. Request routing path

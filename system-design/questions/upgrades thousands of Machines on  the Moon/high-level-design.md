@@ -96,6 +96,139 @@ Notes:
 
 ---
 
+## High-Level Data Flow
+
+### Campaign Initiation Flow
+```mermaid
+sequenceDiagram
+    participant EarthOps as Earth Mission Control
+    participant Orchestrator as Upgrade Orchestrator
+    participant ApprovalGW as Approval Gateway
+    participant ArtifactReg as Artifact Registry
+    participant TopoDB as Topology DB
+    participant P2P as P2P CDN/Seeder
+
+    EarthOps->>Orchestrator: 1. Create campaign (artifact, targets, policy)
+    Orchestrator->>TopoDB: 2. Query server inventory & topology
+    Orchestrator->>ArtifactReg: 3. Validate artifact availability
+    Orchestrator->>ApprovalGW: 4. Request approvals (if Tier1 involved)
+    ApprovalGW-->>EarthOps: 5. Approval notification
+    EarthOps->>ApprovalGW: 6. Submit signed approval
+    ApprovalGW->>Orchestrator: 7. Approval confirmed
+    Orchestrator->>P2P: 8. Pre-seed artifact to Moon CDN
+    Orchestrator->>Orchestrator: 9. Campaign ready to start
+```
+
+### Server Upgrade Flow (Per Server)
+```mermaid
+sequenceDiagram
+    participant Orchestrator as Upgrade Orchestrator
+    participant Server as Target Server
+    participant P2P as P2P CDN
+    participant ArtifactReg as Artifact Registry
+    participant Telemetry as Monitoring
+
+    Orchestrator->>Server: 1. Schedule upgrade (server selected from batch)
+    Server->>Server: 2. Pre-upgrade health check
+    Server->>Telemetry: 3. Report pre-upgrade state
+    Server->>P2P: 4. Request artifact (90% chance - peer discovery)
+    alt Peer available
+        P2P-->>Server: 5a. Download from peer (fast)
+    else No peers / fallback
+        P2P->>ArtifactReg: 5b. Fetch from Moon mirror
+        ArtifactReg-->>P2P: 5c. Artifact data
+        P2P-->>Server: 5d. Download from mirror
+    end
+    Server->>Server: 6. Validate checksum
+    Server->>Server: 7. Apply upgrade (install/restart)
+    Server->>Server: 8. Post-upgrade smoke test
+    Server->>Telemetry: 9. Report upgrade completion
+    Server->>Orchestrator: 10. Update state (SUCCESS/FAILED)
+    alt Upgrade failed
+        Server->>Server: 11. Auto-rollback
+        Server->>Telemetry: 12. Report rollback status
+    end
+```
+
+### Monitoring & Telemetry Flow
+```mermaid
+flowchart LR
+    subgraph Servers ["Lunar Servers (5,000)"]
+        S1[Server 1]
+        S2[Server 2]
+        SN[Server N]
+    end
+    
+    subgraph Telemetry ["Monitoring Pipeline"]
+        Collector[Metrics Collector<br/>Prometheus]
+        TSDB[Time Series DB<br/>VictoriaMetrics]
+        Alerting[AlertManager]
+        Dashboard[Grafana Dashboard]
+        Tracing[Jaeger Tracing]
+    end
+    
+    subgraph Control ["Control Plane"]
+        Orchestrator[Upgrade Orchestrator]
+        AuditLog[Audit Logs]
+    end
+    
+    S1 -->|Heartbeat, metrics| Collector
+    S2 -->|Heartbeat, metrics| Collector
+    SN -->|Heartbeat, metrics| Collector
+    
+    Collector --> TSDB
+    TSDB --> Dashboard
+    TSDB --> Alerting
+    
+    Orchestrator -->|State changes| AuditLog
+    Orchestrator -->|Campaign metrics| TSDB
+    
+    Alerting -->|Critical alerts| EarthMC[Earth Mission Control]
+    Dashboard -->|Real-time view| LunarOps[Lunar Operators]
+    Tracing -->|Request traces| Dashboard
+```
+
+### Artifact Distribution Flow
+```mermaid
+flowchart TB
+    subgraph Earth ["Earth Systems"]
+        EarthMirror[Earth Artifact Mirror<br/>Origin Repository]
+    end
+    
+    subgraph Relay ["Earth↔Moon Relay"]
+        CommRelay[Communication Relay<br/>Store & Forward]
+    end
+    
+    subgraph Moon ["Lunar Infrastructure"]
+        MoonMirror[Moon Artifact Registry<br/>Local Cache: ~1TB]
+        P2PSeeder[P2P Seeders<br/>BitTorrent-like]
+        
+        subgraph Sites ["Lunar Sites"]
+            Site1[Site Alpha<br/>Servers 1-1500]
+            Site2[Site Beta<br/>Servers 1501-3000]  
+            Site3[Site Gamma<br/>Servers 3001-5000]
+        end
+    end
+    
+    EarthMirror -->|30 Mbps bandwidth<br/>New artifacts| CommRelay
+    CommRelay -->|Store & forward<br/>Batched transfer| MoonMirror
+    
+    MoonMirror -->|Initial seed<br/>3+ seeders per site| P2PSeeder
+    
+    P2PSeeder -.->|Peer discovery<br/>90% of transfers| Site1
+    P2PSeeder -.->|Peer discovery<br/>90% of transfers| Site2  
+    P2PSeeder -.->|Peer discovery<br/>90% of transfers| Site3
+    
+    MoonMirror -->|Fallback: 10%<br/>Direct download| Site1
+    MoonMirror -->|Fallback: 10%<br/>Direct download| Site2
+    MoonMirror -->|Fallback: 10%<br/>Direct download| Site3
+    
+    Site1 -.->|Cross-site peering<br/>Redundancy| Site2
+    Site2 -.->|Cross-site peering<br/>Redundancy| Site3
+```
+
+---
+
 ## APIs (control plane)
 
 Example endpoints (REST-style) for orchestrator control:
@@ -162,8 +295,12 @@ Indexing & partitioning suggestions:
 ---
 
 ## Next Steps (Phase 4 handoff)
-- Choose deep-dive areas to expand (sharding strategy for inventory, cache stampede mitigation for P2P, rollback orchestration for stateful DBs).
-- I will create Phase 4 content covering chosen deep dives as separate detailed documents.
+- ✅ **Phase 4**: [Design Deep Dive](./deep-dive.md) - Detailed examination of critical components
+  - P2P Distribution Strategy & Bandwidth Optimization
+  - Rollback Orchestration for Stateful Services  
+  - Communication Resilience & Earth-Moon Latency Handling
+  - Approval Workflow & Emergency Procedures
+- [ ] **Phase 5**: Wrap-up and operational playbook
 
 ---
 
